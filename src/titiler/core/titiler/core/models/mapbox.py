@@ -3,7 +3,17 @@
 from typing import List, Literal, Optional, Tuple
 
 from pydantic import BaseModel, Field, model_validator
+from pyparsing import Union
 
+class RenderParams(BaseModel):
+    """Rendering parameters model."""
+
+    bands: Optional[List[int]] = None
+    color_formula: Optional[str] = None
+    range: Optional[List[float]] = None
+    rescale: Optional[List[float]] = None
+    nodata: Optional[Union[int, float]] = None
+    colormap_name: Optional[str] = None
 
 class TileJSON(BaseModel):
     """
@@ -28,6 +38,8 @@ class TileJSON(BaseModel):
     maxzoom: int = Field(30, ge=0, le=30)
     bounds: List[float] = [-180, -90, 180, 90]
     center: Optional[Tuple[float, float, int]] = None
+    render: Optional[RenderParams] = None
+
 
     @model_validator(mode="after")
     def compute_center(self):
@@ -40,3 +52,4 @@ class TileJSON(BaseModel):
                 self.minzoom,
             )
         return self
+    

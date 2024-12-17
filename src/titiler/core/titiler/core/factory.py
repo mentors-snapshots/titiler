@@ -850,7 +850,9 @@ class TilerFactory(BaseFactory):
                 **render_params.as_dict(),
             )
 
-            return Response(content, media_type=media_type)
+            headers = self._add_metadata_headers(image)
+
+            return Response(content, media_type=media_type, headers=headers)
 
     def tilejson(self):  # noqa: C901
         """Register /tilejson.json endpoint."""
@@ -1235,7 +1237,8 @@ class TilerFactory(BaseFactory):
                 **render_params.as_dict(),
             )
 
-            return Response(content, media_type=media_type)
+            headers = self._add_metadata_headers(image)
+            return Response(content, media_type=media_type, headers=headers)
 
     ############################################################################
     # /bbox and /feature (Optional)
@@ -1304,7 +1307,8 @@ class TilerFactory(BaseFactory):
                 **render_params.as_dict(),
             )
 
-            return Response(content, media_type=media_type)
+            headers = self._add_metadata_headers(image)
+            return Response(content, media_type=media_type, headers=headers)
 
         # POST endpoints
         @self.router.post(
@@ -1368,7 +1372,30 @@ class TilerFactory(BaseFactory):
                 **render_params.as_dict(),
             )
 
-            return Response(content, media_type=media_type)
+            headers = self._add_metadata_headers(image)
+            return Response(content, media_type=media_type, headers=headers)
+
+    def _add_metadata_headers(self, image: ImageData) -> Dict[str, str]:
+        """Create metadata headers from ImageData.
+        
+        Args:
+            image (ImageData): rio-tiler image data.
+        
+        Returns:
+            Dict[str, str]: Dictionary of metadata headers.
+        """
+        headers = {
+            "X-Min": str(image.data.min()),
+            "X-Max": str(image.data.max()),
+        }
+        
+        if hasattr(image, "bounds"):
+            headers["X-Bounds"] = ",".join(map(str, image.bounds))
+        
+        if image.crs and image.crs.to_epsg():
+            headers["X-Epsg"] = str(image.crs.to_epsg())
+        
+        return headers
 
 
 @define(kw_only=True)

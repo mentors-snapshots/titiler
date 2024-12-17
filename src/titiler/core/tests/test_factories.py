@@ -26,6 +26,7 @@ from rio_tiler.errors import NoOverviewWarning
 from rio_tiler.io import BaseReader, MultiBandReader, Reader, STACReader
 from starlette.requests import Request
 from starlette.testclient import TestClient
+from rio_tiler.models import ImageData
 
 from titiler.core.dependencies import RescaleType
 from titiler.core.errors import DEFAULT_STATUS_CODES, add_exception_handlers
@@ -1997,3 +1998,95 @@ def test_colormap_factory():
     assert meta["count"] == 4
     assert meta["width"] == 20
     assert meta["height"] == 256
+
+
+def test_TilerFactory_metadata_headers():
+    """Test TilerFactory metadata headers."""
+    tiler = TilerFactory()
+    
+    # Create test image with known values
+    data = numpy.zeros((1, 256, 256), dtype="uint8")
+    data[0] = numpy.linspace(0, 255, 65536).reshape(256, 256)
+    mask = numpy.ones((256, 256), dtype="uint8")
+    bounds = (-180, -90, 180, 90)
+    img = ImageData(data, mask, bounds=bounds, crs=CRS.from_epsg(4326))
+
+    # Test headers are correctly generated
+    headers = tiler._add_metadata_headers(img)
+    assert headers["X-Min"] == "0"
+    assert headers["X-Max"] == "255"
+    assert headers["X-Bounds"] == "-180,-90,180,90"
+    assert headers["X-Epsg"] == "4326"
+
+    # Test with image having no bounds/CRS
+    img_no_meta = ImageData(data, mask)
+    headers = tiler._add_metadata_headers(img_no_meta)
+    assert headers["X-Min"] == "0"
+    assert headers["X-Max"] == "255"
+    assert "X-Bounds" not in headers
+    assert "X-Epsg" not in headers
+
+def test_TilerFactory_endpoints_include_headers(app):
+    """Test headers are included in endpoint responses."""
+    # Create test image
+    data = numpy.zeros((1, 256, 256), dtype="uint8")
+    data[0] = numpy.linspace(0, 255, 65536).reshape(256, 256)
+    mask = numpy.ones((256, 256), dtype="uint8")
+    bounds = (-180, -90, 180, 90)
+    img = ImageData(data, mask, bounds=bounds, crs=CRS.from_epsg(4326))
+
+    with mock.patch('rio_tiler.io.Reader.preview') as preview:
+        preview.return_value = img
+        response = app.get("/cog/preview?url=https://myurl.com/cog.tif")
+        assert response.status_code == 200
+        assert response.headers["X-Min"] == "0"
+        assert response.headers["X-Max"] == "255"
+        assert response.headers["X-Bounds"] == "-180,-90,180,90"
+        assert response.headers["X-Epsg"] == "4326"
+
+    with mock.patch('rio_tiler.io.Reader.tile') as tile:
+        tile.return_value = img
+        response = app.get(
+            "/cog/tiles/WebMercatorQuad/0/0/0?url=https://myurl.com/cog.tif"
+        )
+        assert response.status_code == 200
+        assert response.headers["X-Min"] == "0"
+        assert response.headers["X-Max"] == "255"
+        assert response.headers["X-Bounds"] == "-180,-90,180,90"
+        assert response.headers["X-Epsg"] == "4326"
+
+    with mock.patch('rio_tiler.io.Reader.part') as part:
+        part.return_value = img
+        response = app.get(
+            "/cog/bbox/-180,-90,180,90.png?url=https://myurl.com/cog.tif"
+        )
+        assert response.status_code == 200
+        assert response.headers["X-Min"] == "0"
+        assert response.headers["X-Max"] == "255"
+        assert response.headers["X-Bounds"] == "-180,-90,180,90"
+        assert response.headers["X-Epsg"] == "4326"
+
+    with mock.patch('rio_tiler.io.Reader.feature') as feature:
+        feature.return_value = img
+        response = app.post(
+            "/cog/feature",
+            json={
+                "type": "Feature",
+                "properties": {},
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [[
+                        [-180, -90],
+                        [180, -90],
+                        [180, 90],
+                        [-180, 90],
+                        [-180, -90]
+                    ]]
+                }
+            }
+        )
+        assert response.status_code == 200
+        assert response.headers["X-Min"] == "0"
+        assert response.headers["X-Max"] == "255"
+        assert response.headers["X-Bounds"] == "-180,-90,180,90"
+        assert response.headers["X-Epsg"] == "4326"

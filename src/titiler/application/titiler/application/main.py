@@ -115,7 +115,6 @@ if not api_settings.disable_cog:
 
 
 ###############################################################################
-
 # STAC endpoints
 if not api_settings.disable_stac:
     stac = MultiBaseTilerFactory(

@@ -4,6 +4,7 @@ from typing import List, Literal, Optional, Tuple
 
 from pydantic import BaseModel, Field, model_validator
 
+
 class TileJSON(BaseModel):
     """
     TileJSON model.
@@ -39,3 +40,4 @@ class TileJSON(BaseModel):
                 self.minzoom,
             )
         return self
+    

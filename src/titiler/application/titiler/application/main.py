@@ -35,7 +35,6 @@ from titiler.extensions import (
     stacExtension,
     stacViewerExtension,
 )
-from titiler.extensions.renders import rendersExtension
 from titiler.mosaic.errors import MOSAIC_STATUS_CODES
 from titiler.mosaic.factory import MosaicTilerFactory
 

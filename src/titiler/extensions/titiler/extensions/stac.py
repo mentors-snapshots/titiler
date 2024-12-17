@@ -163,4 +163,3 @@ class stacExtension(FactoryExtension):
                 geom_densify_pts=geom_densify_pts,
                 geom_precision=geom_precision,
             ).to_dict()
-        

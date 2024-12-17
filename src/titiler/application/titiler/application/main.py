@@ -115,15 +115,6 @@ if not api_settings.disable_cog:
 
 
 ###############################################################################
-# Register renders extension at root level
-renders = TilerFactory(
-    reader=Reader,
-    extensions=[rendersExtension()],
-)
-app.include_router(
-    renders.router,
-    tags=["Renders"],
-)
 
 # STAC endpoints
 if not api_settings.disable_stac:

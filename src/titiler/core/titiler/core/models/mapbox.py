@@ -39,4 +39,3 @@ class TileJSON(BaseModel):
                 self.minzoom,
             )
         return self
-    
